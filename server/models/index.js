@@ -15,6 +15,10 @@ const Task = require('./Task.model');
 const CallLog = require('./CallLog.model');
 const EmailTemplate = require('./EmailTemplate.model');
 const User = require('./User.model');
+const Integration = require('./Integration.model');
+const OauthAccount = require('./OauthAccount.model');
+const WebhookLog = require('./WebhookLog.model');
+const SyncJob = require('./SyncJob.model');
 
 // Define associations
 Lead.hasMany(Opportunity, { foreignKey: 'linkedLeadId', as: 'opportunities' });
@@ -68,5 +72,9 @@ module.exports = {
   Task,
   CallLog,
   EmailTemplate,
-  User
+  User,
+  Integration,
+  OauthAccount,
+  WebhookLog,
+  SyncJob
 };

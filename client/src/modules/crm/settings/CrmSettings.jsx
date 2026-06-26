@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { User, Shield, Info, LogOut, CheckCircle, AlertTriangle } from 'lucide-react';
+import { User, Shield, Info, LogOut, CheckCircle, AlertTriangle, Link as LinkIcon, RefreshCw, Trash2, Check, ExternalLink } from 'lucide-react';
+import axios from 'axios';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 export default function CrmSettings() {
   const { user, logout, updateProfile, changePassword } = useAuth();
@@ -19,6 +22,25 @@ export default function CrmSettings() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [securityMessage, setSecurityMessage] = useState({ text: '', type: '' });
   const [securityLoading, setSecurityLoading] = useState(false);
+
+  // Integrations State
+  const [integrations, setIntegrations] = useState([]);
+  const [syncingProvider, setSyncingProvider] = useState('');
+  const [integrationMessage, setIntegrationMessage] = useState({ text: '', type: '' });
+
+  // Fetch connected integrations
+  const fetchIntegrations = async () => {
+    try {
+      const response = await axios.get(`${API_BASE}/api/integrations`);
+      setIntegrations(response.data.integrations || []);
+    } catch (error) {
+      console.error('Error fetching integrations:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchIntegrations();
+  }, []);
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
@@ -62,6 +84,47 @@ export default function CrmSettings() {
       setSecurityMessage({ text: result.error || 'Failed to update password', type: 'error' });
     }
   };
+
+  const handleConnect = (provider) => {
+    window.location.href = `${API_BASE}/api/oauth/${provider}/login`;
+  };
+
+  const handleDisconnect = async (id) => {
+    if (!window.confirm('Are you sure you want to disconnect this integration? This will remove token storage.')) {
+      return;
+    }
+
+    try {
+      await axios.delete(`${API_BASE}/api/integrations/${id}`);
+      setIntegrationMessage({ text: 'Integration disconnected.', type: 'success' });
+      fetchIntegrations();
+    } catch (error) {
+      setIntegrationMessage({ text: 'Failed to disconnect integration.', type: 'error' });
+    }
+  };
+
+  const handleSync = async (provider) => {
+    setSyncingProvider(provider);
+    setIntegrationMessage({ text: '', type: '' });
+
+    try {
+      const response = await axios.post(`${API_BASE}/api/integrations/sync`, { provider });
+      setIntegrationMessage({
+        text: `Sync complete! Loaded ${response.data.job.recordsSynced} form(s) and target campaigns.`,
+        type: 'success'
+      });
+      fetchIntegrations();
+    } catch (error) {
+      setIntegrationMessage({ text: 'Sync run failed.', type: 'error' });
+    } finally {
+      setSyncingProvider('');
+    }
+  };
+
+  const getIntegration = (provider) => integrations.find(i => i.provider === provider);
+
+  const googleInt = getIntegration('google');
+  const metaInt = getIntegration('meta');
 
   return (
     <div
@@ -126,6 +189,7 @@ export default function CrmSettings() {
           {[
             { id: 'profile', label: 'My Profile', icon: User },
             { id: 'security', label: 'Security', icon: Shield },
+            { id: 'marketing', label: 'Marketing Ads', icon: LinkIcon },
             { id: 'system', label: 'System Info', icon: Info },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -166,7 +230,7 @@ export default function CrmSettings() {
 
         {/* TAB CONTENTS */}
         <div style={{ flex: 1, padding: '32px', overflowY: 'auto' }}>
-          <div style={{ maxWidth: '600px' }}>
+          <div style={{ maxWidth: '680px' }}>
             {/* PROFILE TAB */}
             {activeTab === 'profile' && (
               <div>
@@ -197,7 +261,7 @@ export default function CrmSettings() {
 
                 <form onSubmit={handleUpdateProfile} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 500, color: '#afafaf' }}>FULL NAMELabel</label>
+                    <label style={{ fontSize: '12px', fontWeight: 500, color: '#afafaf' }}>FULL NAME</label>
                     <input
                       type="text"
                       value={fullName}
@@ -303,6 +367,126 @@ export default function CrmSettings() {
               </div>
             )}
 
+            {/* MARKETING ADS TAB */}
+            {activeTab === 'marketing' && (
+              <div>
+                <h2 style={{ fontSize: '20px', fontWeight: 500, marginBottom: '8px' }}>Marketing Lead Ads Integrations</h2>
+                <p style={{ fontSize: '13px', color: '#7c7c7c', marginBottom: '24px' }}>
+                  Connect external marketing platforms. Newly generated leads will automatically synchronize into your Leads database.
+                </p>
+
+                {integrationMessage.text && (
+                  <div
+                    style={{
+                      background: integrationMessage.type === 'success' ? 'rgba(48, 166, 109, 0.1)' : 'rgba(224, 54, 54, 0.1)',
+                      border: integrationMessage.type === 'success' ? '1px solid rgba(48, 166, 109, 0.2)' : '1px solid rgba(224, 54, 54, 0.2)',
+                      color: integrationMessage.type === 'success' ? '#86efac' : '#fca5a5',
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      marginBottom: '20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    {integrationMessage.type === 'success' ? <CheckCircle size={15} /> : <AlertTriangle size={15} />}
+                    {integrationMessage.text}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  {/* GOOGLE ADS PANEL */}
+                  <div style={panelStyle}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#f8f8f8', marginBottom: '4px' }}>Google Ads Lead Forms</h3>
+                        <p style={{ fontSize: '12px', color: '#7c7c7c' }}>Collect leads from Google Search and Display network forms.</p>
+                      </div>
+                      {googleInt ? (
+                        <span style={activeBadgeStyle}>
+                          <Check size={12} /> Connected
+                        </span>
+                      ) : (
+                        <span style={inactiveBadgeStyle}>Disconnected</span>
+                      )}
+                    </div>
+                    
+                    {googleInt && (
+                      <div style={{ marginTop: '16px', fontSize: '13px', color: '#afafaf', background: '#0a0a0a', padding: '12px', borderRadius: '6px', border: '1px solid #1c1c1c' }}>
+                        <div><strong>Account:</strong> {googleInt.accountName}</div>
+                        <div style={{ marginTop: '6px' }}><strong>Sync Forms:</strong> {googleInt.config?.forms?.length || 0} active form mapping(s) detected.</div>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '18px' }}>
+                      {googleInt ? (
+                        <>
+                          <button onClick={() => handleSync('google')} disabled={syncingProvider === 'google'} style={btnSecondaryStyle}>
+                            <RefreshCw size={14} className={syncingProvider === 'google' ? 'animate-spin' : ''} />
+                            Sync Campaigns & Forms
+                          </button>
+                          <button onClick={() => handleDisconnect(googleInt.id)} style={btnDangerStyle}>
+                            <Trash2 size={14} />
+                            Disconnect
+                          </button>
+                        </>
+                      ) : (
+                        <button onClick={() => handleConnect('google')} style={btnPrimaryStyle}>
+                          <ExternalLink size={14} />
+                          Connect Google Ads Account
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* META LEAD ADS PANEL */}
+                  <div style={panelStyle}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#f8f8f8', marginBottom: '4px' }}>Meta Lead Ads (Facebook & Instagram)</h3>
+                        <p style={{ fontSize: '12px', color: '#7c7c7c' }}>Synchronize lead forms submitted on Facebook and Instagram Ads.</p>
+                      </div>
+                      {metaInt ? (
+                        <span style={activeBadgeStyle}>
+                          <Check size={12} /> Connected
+                        </span>
+                      ) : (
+                        <span style={inactiveBadgeStyle}>Disconnected</span>
+                      )}
+                    </div>
+
+                    {metaInt && (
+                      <div style={{ marginTop: '16px', fontSize: '13px', color: '#afafaf', background: '#0a0a0a', padding: '12px', borderRadius: '6px', border: '1px solid #1c1c1c' }}>
+                        <div><strong>Authorized User:</strong> {metaInt.accountName}</div>
+                        <div style={{ marginTop: '6px' }}><strong>Target Forms:</strong> {metaInt.config?.forms?.length || 0} form mapping(s) loaded.</div>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '18px' }}>
+                      {metaInt ? (
+                        <>
+                          <button onClick={() => handleSync('meta')} disabled={syncingProvider === 'meta'} style={btnSecondaryStyle}>
+                            <RefreshCw size={14} className={syncingProvider === 'meta' ? 'animate-spin' : ''} />
+                            Sync Pages & Forms
+                          </button>
+                          <button onClick={() => handleDisconnect(metaInt.id)} style={btnDangerStyle}>
+                            <Trash2 size={14} />
+                            Disconnect
+                          </button>
+                        </>
+                      ) : (
+                        <button onClick={() => handleConnect('meta')} style={btnPrimaryStyle}>
+                          <ExternalLink size={14} />
+                          Connect Meta Ads Account
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* SYSTEM INFO TAB */}
             {activeTab === 'system' && (
               <div>
@@ -371,6 +555,83 @@ const btnStyle = {
   fontWeight: 500,
   cursor: 'pointer',
   boxShadow: '0 4px 10px rgba(163, 82, 204, 0.15)',
+};
+
+const panelStyle = {
+  background: '#0f0f0f',
+  border: '1px solid #1c1c1c',
+  borderRadius: '8px',
+  padding: '20px',
+  display: 'flex',
+  flexDirection: 'column'
+};
+
+const activeBadgeStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '4px',
+  background: 'rgba(48, 166, 109, 0.1)',
+  border: '1px solid rgba(48, 166, 109, 0.2)',
+  color: '#30a66d',
+  fontSize: '11px',
+  fontWeight: 500,
+  padding: '3px 8px',
+  borderRadius: '12px'
+};
+
+const inactiveBadgeStyle = {
+  background: 'rgba(255, 255, 255, 0.05)',
+  border: '1px solid rgba(255, 255, 255, 0.1)',
+  color: '#7c7c7c',
+  fontSize: '11px',
+  fontWeight: 500,
+  padding: '3px 8px',
+  borderRadius: '12px'
+};
+
+const btnPrimaryStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px',
+  background: 'linear-gradient(135deg, #a352cc 0%, #7928ca 100%)',
+  color: '#fff',
+  border: 'none',
+  borderRadius: '6px',
+  padding: '8px 16px',
+  fontSize: '13px',
+  fontWeight: 500,
+  cursor: 'pointer',
+  boxShadow: '0 4px 10px rgba(163, 82, 204, 0.15)'
+};
+
+const btnSecondaryStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px',
+  background: 'rgba(255, 255, 255, 0.05)',
+  border: '1px solid #222',
+  color: '#f8f8f8',
+  borderRadius: '6px',
+  padding: '8px 16px',
+  fontSize: '13px',
+  fontWeight: 500,
+  cursor: 'pointer',
+  transition: 'background 0.2s'
+};
+
+const btnDangerStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px',
+  background: 'rgba(224, 54, 54, 0.1)',
+  border: '1px solid rgba(224, 54, 54, 0.2)',
+  color: '#fca5a5',
+  borderRadius: '6px',
+  padding: '8px 16px',
+  fontSize: '13px',
+  fontWeight: 500,
+  cursor: 'pointer',
+  transition: 'background 0.2s'
 };
 
 const infoRowStyle = {

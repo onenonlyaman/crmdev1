@@ -8,10 +8,16 @@ const router = express.Router();
 // Import route modules
 const crmRoutes = require('./crm.routes');
 const authRoutes = require('./auth.routes');
+const oauthRoutes = require('./oauth.routes');
+const webhookRoutes = require('./webhook.routes');
+const integrationRoutes = require('./integration.routes');
 const authenticateToken = require('../middleware/auth');
 
 // Mount routes
 router.use('/auth', authRoutes);
+router.use('/oauth', oauthRoutes);
+router.use('/webhooks', webhookRoutes);
+router.use('/integrations', integrationRoutes);
 router.use('/crm', authenticateToken, crmRoutes);
 
 router.get('/health', (req, res) => {

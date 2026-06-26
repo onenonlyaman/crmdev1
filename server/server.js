@@ -66,6 +66,10 @@ const startServer = async () => {
       console.error('Failed to seed default administrator:', seedErr);
     }
 
+    // Initialize background worker service
+    const workerService = require('./services/worker.service');
+    workerService.startBackgroundWorkers(app);
+
     server.listen(env.PORT, () => {
       console.log(`Server is running on port ${env.PORT}`);
     });
