@@ -1,0 +1,25 @@
+/* CRM Dashboard responsive overrides */
+
+/* Stat cards: 2x2 on mobile */
+@media (max-width: 768px) {
+  .crm-stat-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .crm-stat-grid > div {
+    border-right: none !important;
+    border-bottom: 1px solid #232323;
+  }
+  .crm-stat-grid > div:nth-child(odd) {
+    border-right: 1px solid #232323 !important;
+  }
+}
+
+/* 2-column chart grid: stack on mobile */
+@media (max-width: 768px) {
+  .crm-two-col {
+    grid-template-columns: 1fr !important;
+  }
+  .crm-half-col {
+    grid-template-columns: 1fr !important;
+  }
+}
