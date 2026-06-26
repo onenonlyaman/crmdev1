@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Dependency directories
 node_modules/
 jspm_packages/
@@ -22,6 +23,8 @@ out/
 *.pem
 *.key
 
+=======
+>>>>>>> d06a3bd3bfc4d94a51aa89db4f6b6a1e109aa2f7
 # Logs
 logs
 *.log
@@ -31,6 +34,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+<<<<<<< HEAD
 # Diagnostic reports (next.js / node)
 .pnp
 .pnp.js
@@ -39,11 +43,24 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 # Editor / IDE configs
 .idea/
 .vscode/
+=======
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+>>>>>>> d06a3bd3bfc4d94a51aa89db4f6b6a1e109aa2f7
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+<<<<<<< HEAD
 .classpath
 .project
 .settings/
@@ -52,3 +69,10 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 .DS_Store
 Thumbs.db
 desktop.ini
+=======
+
+# Env
+.env
+.env.*
+!.env.example
+>>>>>>> d06a3bd3bfc4d94a51aa89db4f6b6a1e109aa2f7

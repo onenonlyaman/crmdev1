@@ -24,6 +24,7 @@ for (const [key, value] of Object.entries(models)) {
   if (
     key !== 'sequelize' && 
     key !== 'Sequelize' && 
+    key !== 'User' && 
     value && 
     typeof value === 'function' && 
     value.init

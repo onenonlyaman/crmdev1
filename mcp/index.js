@@ -17,7 +17,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '../server/.env') });
 
 const isSseMode = process.argv.includes('--sse');
-const mcpApiKey = process.env.MCP_API_KEY || 'crm_mcp_secret_token_12345';
+const mcpApiKey = process.env.MCP_API_KEY;
 
 // Logging helper (Stderr for Stdio transport, Stdout for SSE)
 const logInfo = (msg) => {
@@ -27,6 +27,17 @@ const logInfo = (msg) => {
     console.error(msg);
   }
 };
+
+if (!mcpApiKey && isSseMode) {
+  if (process.env.NODE_ENV === 'production') {
+    logInfo('CRITICAL ERROR: MCP_API_KEY environment variable must be set in production!');
+    process.exit(1);
+  } else {
+    logInfo('WARNING: MCP_API_KEY is not set. Falling back to default developer token.');
+  }
+}
+
+const activeApiKey = mcpApiKey || 'crm_mcp_secret_token_12345';
 
 // Import database models using CommonJS require wrapper
 const require = createRequire(import.meta.url);
@@ -39,6 +50,7 @@ for (const [key, value] of Object.entries(models)) {
   if (
     key !== 'sequelize' && 
     key !== 'Sequelize' && 
+    key !== 'User' && 
     value && 
     typeof value === 'function' && 
     value.init
@@ -146,6 +158,13 @@ const server = new McpServer({
   version: "1.0.0"
 });
 
+const ASSOCIATION_INCLUDES = {
+  Lead: ['opportunities', 'noteRecords', 'tasks', 'callLogs'],
+  Opportunity: ['lead', 'noteRecords', 'tasks', 'callLogs'],
+  Customer: ['noteRecords', 'tasks', 'callLogs'],
+  Contact: ['noteRecords', 'tasks', 'callLogs']
+};
+
 // Dynamically build and register tools for all detected models
 for (const [modelName, Model] of Object.entries(Models)) {
   const snakeName = toSnakeCase(modelName);
@@ -185,13 +204,17 @@ for (const [modelName, Model] of Object.entries(Models)) {
   // 2. Get tool: get_<model>
   server.tool(
     `get_${snakeName}`,
-    `Retrieve a single ${modelName} record by its ID.`,
+    `Retrieve a single ${modelName} record by its ID with all associated activities (notes, tasks, call logs).`,
     {
       id: z.string().describe(`The ID of the ${modelName} record to retrieve`)
     },
     async ({ id }) => {
       try {
-        const record = await Model.findByPk(id);
+        const queryOptions = {};
+        if (ASSOCIATION_INCLUDES[modelName]) {
+          queryOptions.include = ASSOCIATION_INCLUDES[modelName];
+        }
+        const record = await Model.findByPk(id, queryOptions);
         if (!record) {
           return {
             isError: true,
@@ -299,6 +322,151 @@ for (const [modelName, Model] of Object.entries(Models)) {
   );
 }
 
+// 6. Global Analytics Tool: get_crm_metrics
+server.tool(
+  "get_crm_metrics",
+  "Retrieve high-level CRM dashboard metrics including Leads status distribution, Opportunities pipeline stages/amounts, and module counts.",
+  {},
+  async () => {
+    try {
+      const { Lead, Opportunity, Customer, Contact, Task } = Models;
+      const Op = sequelize.Sequelize.Op;
+
+      // 1. Leads by status
+      const leads = await Lead.findAll({
+        attributes: ['status', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+        group: ['status']
+      });
+
+      // 2. Opportunities by stage and total value
+      const opportunities = await Opportunity.findAll({
+        attributes: [
+          'stage', 
+          [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+          [sequelize.fn('SUM', sequelize.col('amount')), 'totalValue']
+        ],
+        group: ['stage']
+      });
+
+      // 3. Customers count
+      const activeCustomersCount = await Customer.count({ where: { status: 'Active' } });
+      const totalCustomersCount = await Customer.count();
+
+      // 4. Contacts count
+      const totalContactsCount = await Contact.count();
+
+      // 5. Tasks pending vs completed
+      const pendingTasksCount = await Task.count({ where: { done: false } });
+      const completedTasksCount = await Task.count({ where: { done: true } });
+
+      const metrics = {
+        leadsDistribution: leads.map(l => ({ status: l.status, count: parseInt(l.getDataValue('count'), 10) })),
+        opportunitiesPipeline: opportunities.map(o => ({
+          stage: o.stage,
+          count: parseInt(o.getDataValue('count'), 10),
+          totalValue: parseFloat(o.getDataValue('totalValue') || 0)
+        })),
+        customers: {
+          active: activeCustomersCount,
+          total: totalCustomersCount
+        },
+        contacts: {
+          total: totalContactsCount
+        },
+        tasks: {
+          pending: pendingTasksCount,
+          completed: completedTasksCount
+        }
+      };
+
+      return {
+        content: [{ type: 'text', text: JSON.stringify(metrics, null, 2) }]
+      };
+    } catch (error) {
+      return {
+        isError: true,
+        content: [{ type: 'text', text: `Error generating metrics: ${error.message}` }]
+      };
+    }
+  }
+);
+
+// 7. Global Search Tool: search_crm
+server.tool(
+  "search_crm",
+  "Perform a global wildcard search across CRM Leads, Customers, Contacts, and Opportunities for names, emails, phones, or titles.",
+  {
+    query: z.string().describe("The search term (name, email, phone, organization, or title)")
+  },
+  async ({ query }) => {
+    try {
+      const { Lead, Opportunity, Customer, Contact } = Models;
+      const Op = sequelize.Sequelize.Op;
+      const likeQuery = `%${query}%`;
+
+      const [leads, customers, contacts, opportunities] = await Promise.all([
+        Lead.findAll({
+          where: {
+            [Op.or]: [
+              { firstName: { [Op.like]: likeQuery } },
+              { lastName: { [Op.like]: likeQuery } },
+              { email: { [Op.like]: likeQuery } },
+              { mobileNo: { [Op.like]: likeQuery } },
+              { organization: { [Op.like]: likeQuery } }
+            ]
+          },
+          limit: 10
+        }),
+        Customer.findAll({
+          where: {
+            [Op.or]: [
+              { customerName: { [Op.like]: likeQuery } },
+              { email: { [Op.like]: likeQuery } },
+              { mobile: { [Op.like]: likeQuery } }
+            ]
+          },
+          limit: 10
+        }),
+        Contact.findAll({
+          where: {
+            [Op.or]: [
+              { firstName: { [Op.like]: likeQuery } },
+              { lastName: { [Op.like]: likeQuery } },
+              { email: { [Op.like]: likeQuery } },
+              { mobile: { [Op.like]: likeQuery } }
+            ]
+          },
+          limit: 10
+        }),
+        Opportunity.findAll({
+          where: {
+            [Op.or]: [
+              { title: { [Op.like]: likeQuery } }
+            ]
+          },
+          limit: 10
+        })
+      ]);
+
+      const results = {
+        leads,
+        customers,
+        contacts,
+        opportunities
+      };
+
+      return {
+        content: [{ type: 'text', text: JSON.stringify(results, null, 2) }]
+      };
+    } catch (error) {
+      return {
+        isError: true,
+        content: [{ type: 'text', text: `Error executing search: ${error.message}` }]
+      };
+    }
+  }
+);
+
 // Runner for Stdio mode (for local AI clients like Cursor or Claude Desktop)
 async function runStdio() {
   const transport = new StdioServerTransport();
@@ -332,7 +500,7 @@ async function runSse() {
       token = req.headers['x-api-key'];
     }
 
-    if (token === mcpApiKey) {
+    if (token === activeApiKey) {
       return next();
     }
 
@@ -376,7 +544,7 @@ async function runSse() {
   const port = process.env.MCP_PORT || 5001;
   app.listen(port, () => {
     logInfo(`[MCP Server] SSE server running on http://localhost:${port}`);
-    logInfo(`[MCP Server] Connection endpoint: http://localhost:${port}/sse?token=${mcpApiKey}`);
+    logInfo(`[MCP Server] Connection endpoint: http://localhost:${port}/sse?token=${activeApiKey}`);
   });
 }
 

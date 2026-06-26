@@ -14,10 +14,44 @@ const Note = require('./Note.model');
 const Task = require('./Task.model');
 const CallLog = require('./CallLog.model');
 const EmailTemplate = require('./EmailTemplate.model');
+const User = require('./User.model');
 
 // Define associations
 Lead.hasMany(Opportunity, { foreignKey: 'linkedLeadId', as: 'opportunities' });
 Opportunity.belongsTo(Lead, { foreignKey: 'linkedLeadId', as: 'lead' });
+
+// Polymorphic Note Associations
+Lead.hasMany(Note, { foreignKey: 'linkedId', constraints: false, scope: { linkedType: 'Lead' }, as: 'noteRecords' });
+Opportunity.hasMany(Note, { foreignKey: 'linkedId', constraints: false, scope: { linkedType: 'Opportunity' }, as: 'noteRecords' });
+Customer.hasMany(Note, { foreignKey: 'linkedId', constraints: false, scope: { linkedType: 'Customer' }, as: 'noteRecords' });
+Contact.hasMany(Note, { foreignKey: 'linkedId', constraints: false, scope: { linkedType: 'Contact' }, as: 'noteRecords' });
+
+Note.belongsTo(Lead, { foreignKey: 'linkedId', constraints: false, as: 'lead' });
+Note.belongsTo(Opportunity, { foreignKey: 'linkedId', constraints: false, as: 'opportunity' });
+Note.belongsTo(Customer, { foreignKey: 'linkedId', constraints: false, as: 'customer' });
+Note.belongsTo(Contact, { foreignKey: 'linkedId', constraints: false, as: 'contact' });
+
+// Polymorphic Task Associations
+Lead.hasMany(Task, { foreignKey: 'linkedId', constraints: false, scope: { linkedType: 'Lead' }, as: 'tasks' });
+Opportunity.hasMany(Task, { foreignKey: 'linkedId', constraints: false, scope: { linkedType: 'Opportunity' }, as: 'tasks' });
+Customer.hasMany(Task, { foreignKey: 'linkedId', constraints: false, scope: { linkedType: 'Customer' }, as: 'tasks' });
+Contact.hasMany(Task, { foreignKey: 'linkedId', constraints: false, scope: { linkedType: 'Contact' }, as: 'tasks' });
+
+Task.belongsTo(Lead, { foreignKey: 'linkedId', constraints: false, as: 'lead' });
+Task.belongsTo(Opportunity, { foreignKey: 'linkedId', constraints: false, as: 'opportunity' });
+Task.belongsTo(Customer, { foreignKey: 'linkedId', constraints: false, as: 'customer' });
+Task.belongsTo(Contact, { foreignKey: 'linkedId', constraints: false, as: 'contact' });
+
+// Polymorphic CallLog Associations
+Lead.hasMany(CallLog, { foreignKey: 'linkedId', constraints: false, scope: { linkedType: 'Lead' }, as: 'callLogs' });
+Opportunity.hasMany(CallLog, { foreignKey: 'linkedId', constraints: false, scope: { linkedType: 'Opportunity' }, as: 'callLogs' });
+Customer.hasMany(CallLog, { foreignKey: 'linkedId', constraints: false, scope: { linkedType: 'Customer' }, as: 'callLogs' });
+Contact.hasMany(CallLog, { foreignKey: 'linkedId', constraints: false, scope: { linkedType: 'Contact' }, as: 'callLogs' });
+
+CallLog.belongsTo(Lead, { foreignKey: 'linkedId', constraints: false, as: 'lead' });
+CallLog.belongsTo(Opportunity, { foreignKey: 'linkedId', constraints: false, as: 'opportunity' });
+CallLog.belongsTo(Customer, { foreignKey: 'linkedId', constraints: false, as: 'customer' });
+CallLog.belongsTo(Contact, { foreignKey: 'linkedId', constraints: false, as: 'contact' });
 
 module.exports = {
   sequelize,
@@ -33,5 +67,6 @@ module.exports = {
   Note,
   Task,
   CallLog,
-  EmailTemplate
+  EmailTemplate,
+  User
 };

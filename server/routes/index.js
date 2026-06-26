@@ -7,9 +7,12 @@ const router = express.Router();
 
 // Import route modules
 const crmRoutes = require('./crm.routes');
+const authRoutes = require('./auth.routes');
+const authenticateToken = require('../middleware/auth');
 
 // Mount routes
-router.use('/crm', crmRoutes);
+router.use('/auth', authRoutes);
+router.use('/crm', authenticateToken, crmRoutes);
 
 router.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'CRM Standalone API is running' });

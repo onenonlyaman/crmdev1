@@ -21,7 +21,7 @@ const Task = sequelize.define('Task', {
     type: DataTypes.STRING,
   },
   dueDate: {
-    type: DataTypes.STRING,
+    type: DataTypes.DATEONLY,
   },
   priority: {
     type: DataTypes.STRING,
@@ -40,11 +40,15 @@ const Task = sequelize.define('Task', {
     defaultValue: false,
   },
   createdOn: {
-    type: DataTypes.STRING,
+    type: DataTypes.DATEONLY,
   },
 }, {
   tableName: 'tasks',
   timestamps: true,
+  indexes: [
+    { fields: ['linkedType', 'linkedId'] },
+    { fields: ['assignedTo'] }
+  ]
 });
 
 module.exports = Task;

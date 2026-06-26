@@ -39,7 +39,7 @@ const Opportunity = sequelize.define('Opportunity', {
     type: DataTypes.STRING,
   },
   expectedCloseDate: {
-    type: DataTypes.STRING,
+    type: DataTypes.DATEONLY,
   },
   assignedTo: {
     type: DataTypes.STRING,
@@ -55,11 +55,15 @@ const Opportunity = sequelize.define('Opportunity', {
     defaultValue: 'Qualification',
   },
   createdOn: {
-    type: DataTypes.STRING,
+    type: DataTypes.DATEONLY,
   },
 }, {
   tableName: 'opportunities',
   timestamps: true,
+  indexes: [
+    { fields: ['linkedLeadId'] },
+    { fields: ['assignedTo'] }
+  ]
 });
 
 module.exports = Opportunity;

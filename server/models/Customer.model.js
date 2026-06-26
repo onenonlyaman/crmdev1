@@ -51,11 +51,16 @@ const Customer = sequelize.define('Customer', {
     defaultValue: 0,
   },
   createdOn: {
-    type: DataTypes.STRING,
+    type: DataTypes.DATEONLY,
   },
 }, {
   tableName: 'customers',
   timestamps: true,
+  indexes: [
+    { fields: ['email'] },
+    { fields: ['mobile'] },
+    { fields: ['assignedTo'] }
+  ]
 });
 
 module.exports = Customer;

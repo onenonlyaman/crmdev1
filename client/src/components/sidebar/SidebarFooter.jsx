@@ -1,9 +1,19 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Settings } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 export default function SidebarFooter({ isCollapsed }) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [profileHovered, setProfileHovered] = useState(false);
   const [searchHovered, setSearchHovered] = useState(false);
+  const [settingsHovered, setSettingsHovered] = useState(false);
+
+  const getInitials = (name) => {
+    if (!name) return 'A';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
 
   return (
     <div
@@ -13,7 +23,9 @@ export default function SidebarFooter({ isCollapsed }) {
         flexShrink: 0,
       }}
     >
+      {/* PROFILE ROW */}
       <div
+        onClick={() => navigate('/crm/settings')}
         onMouseEnter={() => setProfileHovered(true)}
         onMouseLeave={() => setProfileHovered(false)}
         style={{
@@ -44,21 +56,48 @@ export default function SidebarFooter({ isCollapsed }) {
             flexShrink: 0,
           }}
         >
-          RA
+          {getInitials(user?.fullName || user?.username || 'Admin User')}
         </div>
         {!isCollapsed && (
           <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
             <span style={{ fontSize: '12px', fontWeight: 500, color: '#f8f8f8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.2 }}>
-              RIAAN ATTAR
+              {user?.fullName || user?.username || 'Admin User'}
             </span>
             <span style={{ fontSize: '10px', color: '#7c7c7c', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.1 }}>
-              attarriaan6226@gmail.com
+              {user?.email || 'admin@example.com'}
             </span>
           </div>
         )}
       </div>
 
+      {/* SETTINGS ROW */}
+      <div
+        onClick={() => navigate('/crm/settings')}
+        onMouseEnter={() => setSettingsHovered(true)}
+        onMouseLeave={() => setSettingsHovered(false)}
+        style={{
+          height: '30px',
+          display: 'flex',
+          alignItems: 'center',
+          padding: isCollapsed ? '0' : '0 10px',
+          justifyContent: isCollapsed ? 'center' : 'flex-start',
+          gap: '8px',
+          borderRadius: '6px',
+          cursor: 'pointer',
+          marginTop: '4px',
+          background: settingsHovered ? '#171717' : 'transparent',
+          transition: 'background 0.1s',
+        }}
+      >
+        <Settings size={13} color="#7c7c7c" style={{ flexShrink: 0 }} />
+        {!isCollapsed && (
+          <span style={{ fontSize: '12px', color: '#7c7c7c', flex: 1, whiteSpace: 'nowrap' }}>
+            Settings
+          </span>
+        )}
+      </div>
 
+      {/* SEARCH ROW */}
       {!isCollapsed && (
         <div
           onMouseEnter={() => setSearchHovered(true)}

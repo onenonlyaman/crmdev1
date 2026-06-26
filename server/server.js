@@ -41,6 +41,31 @@ const startServer = async () => {
       console.log('Database synced (fallback).');
     }
 
+    // Seed default administrator if users table is empty
+    const { User } = require('./models');
+    try {
+      const userCount = await User.count();
+      if (userCount === 0) {
+        console.log('Seeding default administrator...');
+        await User.create({
+          id: 'USR-0001',
+          username: 'admin',
+          passwordHash: 'adminpassword123',
+          fullName: 'System Administrator',
+          email: 'admin@example.com',
+          themePreference: 'dark'
+        });
+        console.log('==================================================');
+        console.log('DEFAULT ADMINISTRATOR CREATED');
+        console.log('Username: admin');
+        console.log('Password: adminpassword123');
+        console.log('PLEASE CHANGE THE PASSWORD UPON FIRST LOGIN');
+        console.log('==================================================');
+      }
+    } catch (seedErr) {
+      console.error('Failed to seed default administrator:', seedErr);
+    }
+
     server.listen(env.PORT, () => {
       console.log(`Server is running on port ${env.PORT}`);
     });

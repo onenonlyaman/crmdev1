@@ -44,11 +44,14 @@ const CallLog = sequelize.define('CallLog', {
     type: DataTypes.STRING,
   },
   createdOn: {
-    type: DataTypes.STRING,
+    type: DataTypes.DATEONLY,
   },
 }, {
   tableName: 'call_logs',
   timestamps: true,
+  indexes: [
+    { fields: ['linkedType', 'linkedId'] }
+  ]
 });
 
 module.exports = CallLog;

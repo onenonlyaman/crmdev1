@@ -39,7 +39,7 @@ const Lead = sequelize.define('Lead', {
     type: DataTypes.STRING,
   },
   annualRevenue: {
-    type: DataTypes.STRING,
+    type: DataTypes.DECIMAL(15, 2),
   },
   industry: {
     type: DataTypes.STRING,
@@ -68,7 +68,7 @@ const Lead = sequelize.define('Lead', {
     type: DataTypes.STRING,
   },
   followUpDate: {
-    type: DataTypes.STRING,
+    type: DataTypes.DATEONLY,
   },
   priority: {
     type: DataTypes.STRING,
@@ -80,11 +80,16 @@ const Lead = sequelize.define('Lead', {
     type: DataTypes.STRING,
   },
   createdOn: {
-    type: DataTypes.STRING,
+    type: DataTypes.DATEONLY,
   },
 }, {
   tableName: 'leads',
   timestamps: true,
+  indexes: [
+    { fields: ['email'] },
+    { fields: ['mobileNo'] },
+    { fields: ['assignedTo'] },
+  ]
 });
 
 module.exports = Lead;

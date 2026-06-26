@@ -26,14 +26,17 @@ const Note = sequelize.define('Note', {
     type: DataTypes.STRING,
   },
   createdOn: {
-    type: DataTypes.STRING,
+    type: DataTypes.DATEONLY,
   },
   updatedOn: {
-    type: DataTypes.STRING,
+    type: DataTypes.DATEONLY,
   },
 }, {
   tableName: 'notes',
   timestamps: true,
+  indexes: [
+    { fields: ['linkedType', 'linkedId'] }
+  ]
 });
 
 module.exports = Note;
