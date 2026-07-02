@@ -12,6 +12,7 @@
     "mcp:sse": "node mcp/index.js --sse",
     "cli": "node cli/index.js",
     "postinstall": "cd server && npm install",
+    "build": "echo 'No build step required for backend'",
     "start": "cd server && node server.js"
   },
   "devDependencies": {
